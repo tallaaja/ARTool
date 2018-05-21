@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -286,7 +286,7 @@ MonoBehaviour:
   latitudes: []
   longitudes: []
   pictures:
-  - {fileID: 21300000, guid: b64d822f6c337ae44b120e7aff679697, type: 3}
+  - {fileID: 0}
 --- !u!1 &254190147
 GameObject:
   m_ObjectHideFlags: 0
@@ -386,7 +386,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &382371695
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -493,7 +493,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1009664369
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -578,6 +578,26 @@ Prefab:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
+        type: 2}
+      propertyPath: m_DirectAudioMutes.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
+        type: 2}
+      propertyPath: m_TargetAudioSources.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
+        type: 2}
+      propertyPath: m_DirectAudioVolumes.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
+        type: 2}
+      propertyPath: m_EnabledAudioTracks.Array.size
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4332052653181914, guid: e0b5006c5dd6b2e409929cff3d3c0691, type: 2}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -618,12 +638,12 @@ Prefab:
         type: 2}
       propertyPath: m_VideoClip
       value: 
-      objectReference: {fileID: 32900000, guid: fd513f20abcccb24ebb1f3103450a901,
+      objectReference: {fileID: 32900000, guid: 93dcffa0c62880f479d6cafae2d6e5e2,
         type: 3}
     - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
         type: 2}
       propertyPath: m_EnabledAudioTracks.Array.data[0]
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
         type: 2}
@@ -653,6 +673,16 @@ Prefab:
     - target: {fileID: 4669363399012610, guid: e0b5006c5dd6b2e409929cff3d3c0691, type: 2}
       propertyPath: m_LocalPosition.y
       value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
+        type: 2}
+      propertyPath: m_DirectAudioVolumes.Array.data[0]
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 328121232626240362, guid: e0b5006c5dd6b2e409929cff3d3c0691,
+        type: 2}
+      propertyPath: m_ControlledAudioTrackCount
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: e0b5006c5dd6b2e409929cff3d3c0691, type: 2}
@@ -1166,7 +1196,7 @@ MonoBehaviour:
       m_Calls: []
     m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 6fb4a7e8e8280c8408991642999d2ee8, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

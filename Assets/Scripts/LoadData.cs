@@ -7,6 +7,7 @@ using System;
 
 public class LoadData : MonoBehaviour {
 
+    public Text Console;
     public Button loadButton;
     private Vector2 coordinate;
     public List<Vector2> Locations = new List<Vector2>();
@@ -37,6 +38,7 @@ public class LoadData : MonoBehaviour {
             coordinate = new Vector2(latitude, longitude);
 
             Locations.Add(coordinate);
+            Console.text += coordinate + "\n";
             Debug.Log(Locations[i].x);
             i++;
         }

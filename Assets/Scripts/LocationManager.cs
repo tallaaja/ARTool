@@ -11,6 +11,7 @@ public class LocationManager : MonoBehaviour {
     public Button AddLocationButton;
     public string InputValueString;
     private int j = 0;
+    public Text ShowAddedLocation;
 
 	// Use this for initialization
 	void Start () {
@@ -33,6 +34,7 @@ public class LocationManager : MonoBehaviour {
         //Write some text to the test.txt file
         StreamWriter writer = new StreamWriter(path, true);
         writer.WriteLine(InputValueString);
+        ShowAddedLocation.text += InputValueString + "\n";
         writer.Close();
         gpsValuesInput.text = "";
 
