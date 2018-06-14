@@ -172,7 +172,9 @@ public class LocationManager : MonoBehaviour {
         writer.WriteLine(json);
         ShowAddedLocation.text += InputValueString + "\n";
 
-        tcpclient.SendMessage(json);
+       
+        //tcpclient.SendMessage(json);
+        tcpclient.sendJson(json);
         Debug.Log(json);
 
         writer.Close();
@@ -180,20 +182,26 @@ public class LocationManager : MonoBehaviour {
 
     }
 
+    void SendMessage()
+    {
+
+    }
+
+
+
     public Texture2D SendingTexture;
     void WriteImage(String path)
     {
-        bytes = SendingTexture.EncodeToPNG();
-
         if(path != "")
         {
             Debug.Log(path);
             bytes = texture.EncodeToPNG();
         }
 
-        tcpclient.SendImage(bytes);
-
-
+        bytes = SendingTexture.EncodeToPNG();
+        var str = System.Text.Encoding.Default.GetString(bytes) + "\0";
+        //tcpclient.SendImage(System.Text.Encoding.Default.GetBytes(str));
+        tcpclient.sendImage(bytes);
 
     }
 
