@@ -9,6 +9,7 @@ using UnityEngine;
 using System.Data;
 using System.Data.SqlClient;
 using Npgsql;
+using NpgsqlTypes;
 
 public enum PROTOCOL_CODES
 {
@@ -25,6 +26,7 @@ public class TCPTestClient : MonoBehaviour
     StreamReader reader;
     StreamWriter writer;
     Byte[] buffer = new Byte[1024];
+    NpgsqlConnection conn;
 
 
 
@@ -41,6 +43,24 @@ public class TCPTestClient : MonoBehaviour
 
     }
 
+    public void DeleteNewestInsert()
+    {
+        try
+        {
+            string sql = "DELETE FROM organization WHERE \"name\"='testioyab';";
+            NpgsqlCommand command = new NpgsqlCommand(sql, conn);
+            command.ExecuteNonQuery();
+            Debug.Log("deletedd");
+
+        }
+        catch(NpgsqlException ex)
+        {
+            Debug.Log(ex);
+        }
+
+
+    }
+
     /// <summary> 	
     /// Setup socket connection. 	
     /// </summary> 	
@@ -48,45 +68,61 @@ public class TCPTestClient : MonoBehaviour
     {
         try
         {
-            NpgsqlConnection conn = new NpgsqlConnection("Server=23.100.5.134;Port=5432;User Id=postgres;Password=ilove1;Database=simlab;");
-            conn.Open();
+            socketConnection = new TcpClient("127.0.0.1", 8052);
+            stream = socketConnection.GetStream();
 
-            using (NpgsqlCommand command = new NpgsqlCommand("select * from resourcetype", conn))
+            //conn = new NpgsqlConnection("Server=23.100.5.134;Port=5432;User Id=postgres;Password=ilove1;Database=simlab;");
+            //conn.Open();
+
+            /*using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM organization", conn))
             {
-                Debug.Log("sfd");
                 using (NpgsqlDataReader reader = command.ExecuteReader())
                 {
-                    Debug.Log("reader");
+                    Debug.Log(reader.HasRows);
                     while (reader.Read())
                     {
-                        Debug.Log(reader.HasRows);
-                        //Debug.Log("reading");
-                        //Debug.Log(reader.ToString());
-                        Debug.Log(reader["type"].ToString());
- 
+                        Debug.Log("reading");
+                        Debug.Log(reader[0].ToString());
+                        Debug.Log(reader[1].ToString());
+
+
                     }
                 }
-            }
+            }*/
 
-            /*string connectionString = "Server=23.100.5.134, 5432;" + // put the ip here!
-            "Database=simlab;" +
-            "User ID=postgres;" +
-            "Password=ilove1;";
-            SqlConnection dbcon = new SqlConnection(connectionString);
-            dbcon.Open();
-            Debug.Log(dbcon.State);*/
+
+
+            //NpgsqlCommand command2 = new NpgsqlCommand();
+            //command2.CommandText = "INSERT INTO ar-coordinate(latitude) VALUES(?latitude)";
+
+            /*using (NpgsqlCommand command2 = new NpgsqlCommand("INSERT INTO organization(name) VALUES(@name)", conn))
+            {
+                command2.Parameters.Add("name", NpgsqlDbType.Varchar).Value = "testioyab";
+                try
+                {
+                    command2.ExecuteNonQuery();
+                    Debug.Log("executed");
+                   
+                }
+
+                catch (NpgsqlException ex)
+                {
+                    Debug.Log(ex);
+                }
+
+            }*/
 
 
             //clientReceiveThread = new Thread(new ThreadStart(ListenForData));
             //clientReceiveThread.IsBackground = true;
-            // clientReceiveThread.Start();
+            //clientReceiveThread.Start();
 
 
 
         }
         catch (Exception e)
         {
-
+            Debug.Log(e);
         }
     }
 
@@ -213,6 +249,7 @@ public class TCPTestClient : MonoBehaviour
                 byte[] header = BitConverter.GetBytes(clientMessageAsByteArray.Length);
                 stream.Write(header, 0, header.Length); //send the size of array
                 stream.Flush();
+                Debug.Log("halutaan lähettää näin pitkä: " + clientMessageAsByteArray.Length);
 
                 stream.Read(buffer, 0, 4); //read the replycode
                 Int32 reply = BitConverter.ToInt32(buffer, 0);

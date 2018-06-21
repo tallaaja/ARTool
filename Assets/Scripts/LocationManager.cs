@@ -32,6 +32,7 @@ public class LocationManager : MonoBehaviour {
     public string LastOpenedImagePath;
     public static byte[] bytes;
     public TCPTestClient tcpclient;
+    public Button DeleteInsert;
 
 	// Use this for initialization
 
@@ -50,6 +51,7 @@ public class LocationManager : MonoBehaviour {
         
         AddLocationButton.onClick.AddListener(WriteString);
         usethislocation.onClick.AddListener(LocationToString);
+        DeleteInsert.onClick.AddListener(DeleteNewestInsert);
 
         //AddPhoto.onClick.AddListener(opengallery);
 
@@ -67,6 +69,11 @@ public class LocationManager : MonoBehaviour {
             WriteImage(LastOpenedImagePath);
         }
 
+    }
+
+    void DeleteNewestInsert()
+    {
+        tcpclient.DeleteNewestInsert();
     }
 
 

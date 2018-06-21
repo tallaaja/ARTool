@@ -683,7 +683,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -293}
+  m_AnchoredPosition: {x: 0, y: -247}
   m_SizeDelta: {x: 300, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &462064233
@@ -1427,7 +1427,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1264207248
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1841,7 +1841,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -526}
+  m_AnchoredPosition: {x: -227, y: 108}
   m_SizeDelta: {x: 200, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1830525659
@@ -2039,6 +2039,7 @@ MonoBehaviour:
   ShowAddedLocation: {fileID: 1703440841}
   LastOpenedImagePath: 
   tcpclient: {fileID: 1163621841}
+  DeleteInsert: {fileID: 1830525659}
   SendingTexture: {fileID: 2800000, guid: 6fb4a7e8e8280c8408991642999d2ee8, type: 3}
 --- !u!4 &2054890911
 Transform:
