@@ -73,7 +73,7 @@ public class LocationManager : MonoBehaviour {
 
     void DeleteNewestInsert()
     {
-        tcpclient.DeleteNewestInsert();
+        Debug.Log("old delete neweset sql insertion");
     }
 
 

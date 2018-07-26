@@ -10,26 +10,44 @@ using System.Data;
 using System.Data.SqlClient;
 using Npgsql;
 using NpgsqlTypes;
+using System.Runtime.Serialization.Formatters.Binary;
 
 public enum PROTOCOL_CODES
 {
-    ERROR = -1, ACCEPT, DENY, SENDIMAGE, SENDVIDEO, SENDJSON, SENDLOCATION, QUIT
+    ERROR = -1, ERROR_NO_DBCONNECTION
+    , ACCEPT, DENY, SENDIMAGE, SENDVIDEO, SENDJSON, SENDLOCATION, QUIT
+
+    , GET_MY_CONTENTPACKS, SEARCH_CONTENT_PACKS, SEARCH_CONTENTPACKS_BY_USER
+    , GET_SERIES_IN_PACKAGE, GET_VIDEOS_IN_SERIES
+    , REQUEST_VIEW_VIDEO, REQUEST_EDIT_VIDEO
+    , POST_EDITS, UPLOAD_VIDEO
+
+    ,KEEPALIVE_SIGNAL
+
+};
+
+public enum STATUS
+{
+    ERROR = -1, RUNNING, ENDED, QUIT
 };
 
 public class TCPTestClient : MonoBehaviour
 {
     #region private members 	
     private TcpClient socketConnection;
-    //private Thread clientReceiveThread;
+    private TcpClient pingSocketConnection;
+    private Thread clientReceiveThread;
+    private Thread clientKeepAliveThread;
     MemoryStream message = new MemoryStream();
     NetworkStream stream;
+    NetworkStream pingStream;
     StreamReader reader;
     StreamWriter writer;
     Byte[] buffer = new Byte[1024];
     NpgsqlConnection conn;
+    public STATUS status = STATUS.RUNNING;
 
-
-
+    Int32 lastPing = 0;
 
     #endregion
     // Use this for initialization 	
@@ -43,21 +61,40 @@ public class TCPTestClient : MonoBehaviour
 
     }
 
-    public void DeleteNewestInsert()
+    public void OnApplicationQuit()
     {
-        try
+        Debug.Log("exit");
+        if (sendProtocolCode(PROTOCOL_CODES.QUIT))
         {
-            string sql = "DELETE FROM organization WHERE \"name\"='testioyab';";
-            NpgsqlCommand command = new NpgsqlCommand(sql, conn);
-            command.ExecuteNonQuery();
-            Debug.Log("deletedd");
-
+            pingSocketConnection.Close();
+            socketConnection.Close();
         }
-        catch(NpgsqlException ex)
+        else
         {
-            Debug.Log(ex);
+            sendProtocolCode(PROTOCOL_CODES.ERROR);
         }
+    }
 
+    IEnumerator WaitForSeconds()
+    {
+        Debug.Log("before");
+        yield return new WaitForSeconds(2);
+        Debug.Log("after");
+        KeepAlive();
+    }
+
+    void KeepAlive()
+    {
+        Debug.Log("Sending ping");
+        if (sendPing())
+        {
+            //WaitForSeconds();
+            lastPing = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+        }
+        else
+        {
+            sendProtocolCode(PROTOCOL_CODES.ERROR);
+        }
 
     }
 
@@ -68,57 +105,22 @@ public class TCPTestClient : MonoBehaviour
     {
         try
         {
+
             socketConnection = new TcpClient("127.0.0.1", 8052);
+            pingSocketConnection = new TcpClient("127.0.0.1", 8051);
             stream = socketConnection.GetStream();
+            pingStream = socketConnection.GetStream();
+            //StartCoroutine(KeepAlive());
 
-            //conn = new NpgsqlConnection("Server=23.100.5.134;Port=5432;User Id=postgres;Password=ilove1;Database=simlab;");
-            //conn.Open();
-
-            /*using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM organization", conn))
-            {
-                using (NpgsqlDataReader reader = command.ExecuteReader())
-                {
-                    Debug.Log(reader.HasRows);
-                    while (reader.Read())
-                    {
-                        Debug.Log("reading");
-                        Debug.Log(reader[0].ToString());
-                        Debug.Log(reader[1].ToString());
-
-
-                    }
-                }
-            }*/
-
-
-
-            //NpgsqlCommand command2 = new NpgsqlCommand();
-            //command2.CommandText = "INSERT INTO ar-coordinate(latitude) VALUES(?latitude)";
-
-            /*using (NpgsqlCommand command2 = new NpgsqlCommand("INSERT INTO organization(name) VALUES(@name)", conn))
-            {
-                command2.Parameters.Add("name", NpgsqlDbType.Varchar).Value = "testioyab";
-                try
-                {
-                    command2.ExecuteNonQuery();
-                    Debug.Log("executed");
-                   
-                }
-
-                catch (NpgsqlException ex)
-                {
-                    Debug.Log(ex);
-                }
-
-            }*/
-
-
-            //clientReceiveThread = new Thread(new ThreadStart(ListenForData));
-            //clientReceiveThread.IsBackground = true;
-            //clientReceiveThread.Start();
-
-
-
+            clientKeepAliveThread = new Thread(new ThreadStart(KeepAlive));
+            clientKeepAliveThread.IsBackground = true;
+            clientKeepAliveThread.Start();
+            
+            /*
+            clientReceiveThread = new Thread(new ThreadStart(ListenForData));
+            clientReceiveThread.IsBackground = true;
+            clientReceiveThread.Start();
+            */
         }
         catch (Exception e)
         {
@@ -126,87 +128,86 @@ public class TCPTestClient : MonoBehaviour
         }
     }
 
-
-
-    /// <summary> 	
-    /// Runs in background clientReceiveThread; Listens for incomming data. 	
-    /// </summary>     
-    private void ListenForData()
-    {
-        try
-        {
-            Byte[] bytes = new Byte[1024];
-            Debug.Log("listening for server");
-            while (true)
-            {
-                // Get a stream object for reading 				
-                using (NetworkStream stream = socketConnection.GetStream())
-                {
-                    int length;
-                    // Read incomming stream into byte arrary. 					
-                    while ((length = stream.Read(bytes, 0, bytes.Length)) != 0)
-                    {
-                        //var incommingData = new byte[length];
-                        //Array.Copy(bytes, 0, incommingData, 0, length);
-
-                        message.Write(bytes, 0, length);
-
-                        // Convert byte array to string message. 						
-                        string serverMessage = Encoding.ASCII.GetString(bytes, 0, length);
-                        Debug.Log("server message received as: " + serverMessage);
-                    }
-                }
-            }
-        }
-        catch (SocketException socketException)
-        {
-            Debug.Log("Socket exception: " + socketException);
-        }
-    }
-    /// <summary> 	
-    /// Send message to server using socket connection. 	
-    /// </summary> 	
-    public void SendMessage(String clientMessage)
-    {
-        if (socketConnection == null)
-        {
-            return;
-        }
-        try
-        {
-            // Get a stream object for writing. 			
-            if (stream.CanWrite)
-            {
-                
-                // Convert string message to byte array.                 
-                byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);       
-
-                // Write byte array to socketConnection stream.                 
-                stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-                stream.Flush();
-                Debug.Log("Client sent his message - should be received by server");
-            }
-        }
-        catch (SocketException socketException)
-        {
-            Debug.Log("Socket exception: " + socketException);
-        }
-    }
+   
 
     public void sendJson(String message)
     {
-        PROTOCOL_CODES code = sendRequest(PROTOCOL_CODES.SENDJSON);
-        Debug.Log(code.ToString());
-        if (code == PROTOCOL_CODES.ACCEPT) SendBytes(Encoding.ASCII.GetBytes(message));
+        Debug.Log("json sent");
+        if (sendProtocolCode(PROTOCOL_CODES.SENDJSON)) SendBytes(Encoding.ASCII.GetBytes(message));
+        else Debug.Log("Server did not accept");
+    }
+    public void sendImage(byte[] image)
+    {
+        Debug.Log("sending image");
+        if (sendProtocolCode(PROTOCOL_CODES.SENDIMAGE)) SendBytes(image);
         else Debug.Log("Server did not accept");
     }
 
 
-    public PROTOCOL_CODES sendRequest(PROTOCOL_CODES code)
+
+
+    byte[] receiveBytes(int lenght)
+    {
+        try
+        {
+            byte[] bytes = new byte[lenght];
+            int received;
+            int receivedSofar = 0;
+            while (receivedSofar < lenght && (received = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                Array.Copy(buffer, 0, bytes, receivedSofar, received);
+                receivedSofar += received;
+                // Convert byte array to string message. 							
+                string clientMessage = Encoding.ASCII.GetString(buffer, 0, received);
+                Console.WriteLine("received: " + received + " bytes");
+            }
+            Console.WriteLine("received full : " + receivedSofar + " bytes");
+            return bytes;
+        }
+        catch (SocketException socketException)
+        {
+            Console.WriteLine("Socket exception: " + socketException);
+            status = STATUS.ERROR;
+            return null;
+        }
+    }
+
+    bool sendPing()
+    {
+        if (pingSocketConnection == null)
+        {
+
+            return false;
+        }
+        try
+        {
+            // Get a stream object for writing. 			
+            if (pingStream.CanWrite)
+            {
+                //byte[] message = BitConverter.GetBytes((int)PROTOCOL_CODES.KEEPALIVE_SIGNAL);
+
+                pingStream.Read(buffer, 0, 4); //read the replycode
+                Debug.Log("received ping");
+                return true;
+            }
+            status = STATUS.ERROR;
+            return false;
+        }
+        catch (SocketException socketException)
+        {
+            Debug.Log("Socket exception: " + socketException);
+            status = STATUS.ERROR;
+            return false;
+        }
+    }
+
+
+    bool sendProtocolCode(PROTOCOL_CODES code)
     {
         if (socketConnection == null)
         {
-            return PROTOCOL_CODES.ERROR;
+
+            return false;
         }
         try
         {
@@ -214,25 +215,42 @@ public class TCPTestClient : MonoBehaviour
             if (stream.CanWrite)
             {
                 byte[] message = BitConverter.GetBytes((int)code);
-                stream.Write(message, 0, 4);
-                stream.Flush();
-                Debug.Log("awating server reply.");
-                stream.Read(buffer, 0, 4); //read the replycode
-
-                Int32 reply = BitConverter.ToInt32(buffer, 0);      
-                Debug.Log("Client sent request. Received reply:" + ((PROTOCOL_CODES)reply).ToString());
-                return (PROTOCOL_CODES)reply;
+                stream.Write(message, 0, 4); //read the replycode
+                Console.WriteLine("Sent protocol code:" + ((PROTOCOL_CODES)code).ToString());
+                return true;
             }
+            status = STATUS.ERROR;
+            return false;
         }
         catch (SocketException socketException)
         {
-            Debug.Log("Socket exception: " + socketException);
-            return PROTOCOL_CODES.ERROR;
+            Console.WriteLine("Socket exception: " + socketException);
+            status = STATUS.ERROR;
+            return false;
         }
-        Debug.Log("could not write");
-        return PROTOCOL_CODES.ERROR;
-
     }
+
+
+    public void sendListString(string[][] obj)
+    {
+        int len = obj.Length;
+        byte[] bytes = new byte[len];
+
+        BinaryFormatter bf = new BinaryFormatter();
+        bf.Serialize(stream, obj);
+        stream.Flush();
+    }
+
+    public string[][] receiveListString()
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        return (string[][])bf.Deserialize(stream);
+    }
+
+
+
+
+
 
 
     public void SendBytes(Byte[] clientMessageAsByteArray)
@@ -273,38 +291,7 @@ public class TCPTestClient : MonoBehaviour
         //Debug.Log("could not write");
     }
 
-    public void sendImage(byte[] image)
-    {
-        PROTOCOL_CODES code = sendRequest(PROTOCOL_CODES.SENDIMAGE);
-        Debug.Log(code.ToString());
-        if (code == PROTOCOL_CODES.ACCEPT) SendBytes(image);
-        else Debug.Log("Server did not accept");
-    }
 
-    /*public void SendImage(byte[] image)
-    {
-        if (socketConnection == null)
-        { 
-            return;
-        }
-        try
-        {
-            // Get a stream object for writing. 			
-            NetworkStream stream = socketConnection.GetStream();
-            if (stream.CanWrite)
-            {
-                SendMessage(image.Length.ToString());
-                //string clientMessage = LocationManager.json;
-                // Convert string message to byte array. 
-                stream.Write(image, 0, image.Length);
-                // Write byte array to socketConnection stream.                 
-                //stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-                Debug.Log("Client sent his image - should be received by server");
-            }
-        }
-        catch (SocketException socketException)
-        {
-            Debug.Log("Socket exception: " + socketException);
-        }
-    }*/
+
+   
 }
