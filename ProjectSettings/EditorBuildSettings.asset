@@ -5,6 +5,15 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/GPSTest.unity
     guid: 2f59b49a95a772940b94d49a50a198b1
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: a7d1e3496ef245b4cbb3775450a373a7
+  - enabled: 1
+    path: Assets/Scenes/LoadScene.unity
+    guid: ea304925920d75b448507f4ca55aa96f
+  - enabled: 1
+    path: Assets/Scenes/CreateScene.unity
+    guid: f2fdebe0d20c22749bda7c79a62820db
