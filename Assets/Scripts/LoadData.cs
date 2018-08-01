@@ -22,8 +22,8 @@ public class LoadData : MonoBehaviour {
 
     void ReadString()
     {
-        string path = "Assets/Resources/test.txt";
-
+        string path = Application.persistentDataPath + "/text.txt";
+        //string path = "Assets/Resources/test.txt";
         //Read the text from directly from the test.txt file
         StreamReader reader = new StreamReader(path);
 
@@ -32,7 +32,7 @@ public class LoadData : MonoBehaviour {
         int i = 0;
         while (reader.Peek() > -1)
         {
-            splitArray = reader.ReadLine().Split(new string[] { ";" }, StringSplitOptions.None);
+            splitArray = reader.ReadLine().Split(new string[] { ", " }, StringSplitOptions.None);
             float latitude = float.Parse(splitArray[0]);
             float longitude = float.Parse(splitArray[1]);
             coordinate = new Vector2(latitude, longitude);
