@@ -11,6 +11,8 @@ using System.Data.SqlClient;
 using Npgsql;
 using NpgsqlTypes;
 using System.Runtime.Serialization.Formatters.Binary;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 public enum PROTOCOL_CODES
 {
@@ -48,6 +50,7 @@ public class TCPTestClient : MonoBehaviour
     public STATUS status = STATUS.RUNNING;
 
     Int32 lastPing = 0;
+    private object cloudBlobContainer;
 
     #endregion
     // Use this for initialization 	
@@ -139,7 +142,9 @@ public class TCPTestClient : MonoBehaviour
     public void sendImage(byte[] image)
     {
         Debug.Log("sending image");
-        if (sendProtocolCode(PROTOCOL_CODES.SENDIMAGE)) SendBytes(image);
+        if (sendProtocolCode(PROTOCOL_CODES.SENDIMAGE)) {
+            CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(image);
+        } //SendBytes(image);
         else Debug.Log("Server did not accept");
     }
 
