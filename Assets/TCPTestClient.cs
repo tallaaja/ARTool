@@ -28,6 +28,8 @@ public enum PROTOCOL_CODES
 
 };
 
+
+
 public enum STATUS
 {
     ERROR = -1, RUNNING, ENDED, QUIT
@@ -51,6 +53,8 @@ public class TCPTestClient : MonoBehaviour
 
     Int32 lastPing = 0;
     private object cloudBlobContainer;
+    string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=platformvideos;AccountKey=h6iS/e7UEIOXoLpd3UeECNXZhjOzVSvbdsn6QWs5+k0kJH/iBKZzxZFBJ41TTBZnkrtBC3WKOM2Xmp0ouBFXUg==;EndpointSuffix=core.windows.net";
+    string policyName = "SimLabIT_Policy";
 
     #endregion
     // Use this for initialization 	
@@ -143,8 +147,10 @@ public class TCPTestClient : MonoBehaviour
     {
         Debug.Log("sending image");
         if (sendProtocolCode(PROTOCOL_CODES.SENDIMAGE)) {
-            CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(image);
-        } //SendBytes(image);
+            //CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(image);
+            //SendBytes(image);
+
+        } 
         else Debug.Log("Server did not accept");
     }
 
