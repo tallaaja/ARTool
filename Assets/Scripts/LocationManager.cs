@@ -180,7 +180,7 @@ public class LocationManager : MonoBehaviour {
         ShowAddedLocation.text += InputValueString + "\n";
 
        
-        //tcpclient.SendMessage(json);
+        tcpclient.SendMessage(json);
         tcpclient.sendJson(json);
         Debug.Log(json);
 
