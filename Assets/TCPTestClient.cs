@@ -13,16 +13,18 @@ using NpgsqlTypes;
 using System.Runtime.Serialization.Formatters.Binary;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 
 public enum PROTOCOL_CODES
 {
     ERROR = -1, ERROR_NO_DBCONNECTION
-    , ACCEPT, DENY, SENDIMAGE, SENDVIDEO, SENDJSON, SENDLOCATION, QUIT
+    , ACCEPT, DENY, SENDIMAGE, SENDVIDEO, SENDJSON, SENDLOCATION, QUIT, OK
 
     , GET_MY_CONTENTPACKS, SEARCH_CONTENT_PACKS, SEARCH_CONTENTPACKS_BY_USER
     , GET_SERIES_IN_PACKAGE, GET_VIDEOS_IN_SERIES
     , REQUEST_VIEW_VIDEO, REQUEST_EDIT_VIDEO
-    , POST_EDITS, UPLOAD_VIDEO
+    , POST_EDITS, UPLOAD_VIDEO, UPLOAD_ASSETPACKAGE
 
     ,KEEPALIVE_SIGNAL
 
@@ -38,16 +40,16 @@ public enum STATUS
 public class TCPTestClient : MonoBehaviour
 {
     #region private members 	
-    private TcpClient socketConnection;
+    private TcpClient serverSocket;
     private TcpClient pingSocketConnection;
     private Thread clientReceiveThread;
     private Thread clientKeepAliveThread;
     MemoryStream message = new MemoryStream();
-    NetworkStream stream;
+    public NetworkStream stream;
     NetworkStream pingStream;
-    StreamReader reader;
-    StreamWriter writer;
-    Byte[] buffer = new Byte[1024];
+    public BinaryReader reader;
+    public BinaryWriter writer;
+    public Byte[] bytesFrom = new Byte[102400];
     NpgsqlConnection conn;
     public STATUS status = STATUS.RUNNING;
 
@@ -60,6 +62,7 @@ public class TCPTestClient : MonoBehaviour
     // Use this for initialization 	
     void Start()
     {
+
         ConnectToTcpServer();
     }
     // Update is called once per frame
@@ -71,36 +74,36 @@ public class TCPTestClient : MonoBehaviour
     public void OnApplicationQuit()
     {
         Debug.Log("exit");
-        if (sendProtocolCode(PROTOCOL_CODES.QUIT))
+        if (SendProtocolCode(PROTOCOL_CODES.QUIT))
         {
             pingSocketConnection.Close();
-            socketConnection.Close();
+            serverSocket.Close();
         }
         else
         {
-            sendProtocolCode(PROTOCOL_CODES.ERROR);
+            SendProtocolCode(PROTOCOL_CODES.ERROR);
         }
     }
 
     IEnumerator WaitForSeconds()
     {
-        Debug.Log("before");
+       // Debug.Log("before");
         yield return new WaitForSeconds(2);
-        Debug.Log("after");
+        //Debug.Log("after");
         KeepAlive();
     }
 
     void KeepAlive()
     {
-        Debug.Log("Sending ping");
-        if (sendPing())
+      //  Debug.Log("Sending ping");
+        if (SendPing())
         {
             //WaitForSeconds();
             lastPing = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
         }
         else
         {
-            sendProtocolCode(PROTOCOL_CODES.ERROR);
+            SendProtocolCode(PROTOCOL_CODES.ERROR);
         }
 
     }
@@ -113,21 +116,24 @@ public class TCPTestClient : MonoBehaviour
         try
         {
 
-            socketConnection = new TcpClient("127.0.0.1", 8052);
+            serverSocket = new TcpClient("127.0.0.1", 8052);
             pingSocketConnection = new TcpClient("127.0.0.1", 8051);
-            stream = socketConnection.GetStream();
-            pingStream = socketConnection.GetStream();
+            stream = serverSocket.GetStream();
+            pingStream = serverSocket.GetStream();
             //StartCoroutine(KeepAlive());
 
             clientKeepAliveThread = new Thread(new ThreadStart(KeepAlive));
             clientKeepAliveThread.IsBackground = true;
             clientKeepAliveThread.Start();
-            
+
             /*
             clientReceiveThread = new Thread(new ThreadStart(ListenForData));
             clientReceiveThread.IsBackground = true;
             clientReceiveThread.Start();
             */
+
+            reader = new BinaryReader(stream);
+            writer = new BinaryWriter(stream);
         }
         catch (Exception e)
         {
@@ -135,20 +141,24 @@ public class TCPTestClient : MonoBehaviour
         }
     }
 
+
+
+
    
 
-    public void sendJson(String message)
+    public void SendJson(String message)
     {
         Debug.Log("json sent");
-        if (sendProtocolCode(PROTOCOL_CODES.SENDJSON)) SendBytes(Encoding.ASCII.GetBytes(message));
+        if (SendRequest(PROTOCOL_CODES.SENDJSON) == PROTOCOL_CODES.ACCEPT) SendBytes(Encoding.UTF8.GetBytes(message));
         else Debug.Log("Server did not accept");
     }
-    public void sendImage(byte[] image)
+
+    public void SendImage(byte[] image)
     {
         Debug.Log("sending image");
-        if (sendProtocolCode(PROTOCOL_CODES.SENDIMAGE)) {
+        if (SendRequest(PROTOCOL_CODES.SENDIMAGE) == PROTOCOL_CODES.ACCEPT) {
             //CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(image);
-            //SendBytes(image);
+            SendBytes(image);
 
         } 
         else Debug.Log("Server did not accept");
@@ -157,21 +167,25 @@ public class TCPTestClient : MonoBehaviour
 
 
 
-    byte[] receiveBytes(int lenght)
+    public byte[] ReceiveBytes(int lenght)
     {
         try
         {
-            byte[] bytes = new byte[lenght];
+            byte[] bytes;
             int received;
             int receivedSofar = 0;
-            while (receivedSofar < lenght && (received = stream.Read(buffer, 0, buffer.Length)) > 0)
+            /*while (receivedSofar < lenght && (received = stream.Read(bytesFrom, 0, bytesFrom.Length)) > 0)
             {
-                Array.Copy(buffer, 0, bytes, receivedSofar, received);
+                Debug.Log("received: " + received + " bytes.len:" + bytes.Length);
+                Debug.Log("msg: " + Encoding.UTF8.GetString(bytesFrom, 0, received));
+                Array.Copy(bytesFrom, 0, bytes, receivedSofar, received);
                 receivedSofar += received;
                 // Convert byte array to string message. 							
-                string clientMessage = Encoding.ASCII.GetString(buffer, 0, received);
+                string clientMessage = Encoding.UTF8.GetString(bytesFrom, 0, received);
                 Console.WriteLine("received: " + received + " bytes");
-            }
+            }*/
+
+            bytes = reader.ReadBytes(lenght);
             Console.WriteLine("received full : " + receivedSofar + " bytes");
             return bytes;
         }
@@ -183,7 +197,7 @@ public class TCPTestClient : MonoBehaviour
         }
     }
 
-    bool sendPing()
+    bool SendPing()
     {
         if (pingSocketConnection == null)
         {
@@ -197,7 +211,7 @@ public class TCPTestClient : MonoBehaviour
             {
                 //byte[] message = BitConverter.GetBytes((int)PROTOCOL_CODES.KEEPALIVE_SIGNAL);
 
-                pingStream.Read(buffer, 0, 4); //read the replycode
+                pingStream.Read(bytesFrom, 0, 4); //read the replycode
                 Debug.Log("received ping");
                 return true;
             }
@@ -213,9 +227,51 @@ public class TCPTestClient : MonoBehaviour
     }
 
 
-    bool sendProtocolCode(PROTOCOL_CODES code)
+    public PROTOCOL_CODES GetRequest()
     {
-        if (socketConnection == null)
+        if (serverSocket == null)
+        {
+            return PROTOCOL_CODES.ERROR;
+        }
+        try
+        {
+             //read the replycode
+            Int32 request = reader.ReadInt32();
+            Console.WriteLine("Received request: " + ((PROTOCOL_CODES)request).ToString());
+            return (PROTOCOL_CODES)request;
+        }
+        catch (Exception socketException)
+        {
+            Console.WriteLine("Socket exception: " + socketException);
+            status = STATUS.ERROR;
+            return PROTOCOL_CODES.ERROR;
+        }
+    }
+    public PROTOCOL_CODES receiveProtocolCode()
+    {
+        if (serverSocket == null)
+        {
+            return PROTOCOL_CODES.ERROR;
+        }
+        try
+        {
+            //read the replycode
+            Int32 request = reader.ReadInt32(); ;
+            Console.WriteLine("Received request: " + ((PROTOCOL_CODES)request).ToString());
+            return (PROTOCOL_CODES)request;
+        }
+        catch (Exception socketException)
+        {
+            Console.WriteLine("Socket exception: " + socketException);
+           
+            status = STATUS.ERROR;
+            return PROTOCOL_CODES.ERROR;
+        }
+    }
+
+    public bool SendProtocolCode(PROTOCOL_CODES code)
+    {
+        if (serverSocket == null)
         {
 
             return false;
@@ -223,17 +279,16 @@ public class TCPTestClient : MonoBehaviour
         try
         {
             // Get a stream object for writing. 			
-            if (stream.CanWrite)
-            {
-                byte[] message = BitConverter.GetBytes((int)code);
-                stream.Write(message, 0, 4); //read the replycode
-                Console.WriteLine("Sent protocol code:" + ((PROTOCOL_CODES)code).ToString());
-                return true;
-            }
+
+            byte[] message = BitConverter.GetBytes((int)code);
+            writer.Write(message, 0, 4); //read the replycode
+            Console.WriteLine("Sent protocol code:" + ((PROTOCOL_CODES)code).ToString());
+            return true;
+
             status = STATUS.ERROR;
             return false;
         }
-        catch (SocketException socketException)
+        catch (Exception socketException)
         {
             Console.WriteLine("Socket exception: " + socketException);
             status = STATUS.ERROR;
@@ -241,68 +296,144 @@ public class TCPTestClient : MonoBehaviour
         }
     }
 
-
-    public void sendListString(string[][] obj)
+    public PROTOCOL_CODES SendRequest(PROTOCOL_CODES code)
     {
-        int len = obj.Length;
-        byte[] bytes = new byte[len];
+        if (serverSocket == null)
+        {
+            return PROTOCOL_CODES.ERROR;
+        }
+        try
+        {
+            // Get a stream object for writing. 			
 
-        BinaryFormatter bf = new BinaryFormatter();
-        bf.Serialize(stream, obj);
-        stream.Flush();
+            byte[] message = BitConverter.GetBytes((int)code);
+            writer.Write((Int32)code);
+            //read the replycode
+            Int32 reply = reader.ReadInt32(); ;
+            Console.WriteLine("Client sent request. Received reply:" + ((PROTOCOL_CODES)reply).ToString());
+            return (PROTOCOL_CODES)reply;
+
+        }
+        catch (Exception socketException)
+        {
+            Console.WriteLine("Socket exception: " + socketException);
+            status = STATUS.ERROR;
+            return PROTOCOL_CODES.ERROR;
+        }
+        return PROTOCOL_CODES.ERROR;
     }
-
-    public string[][] receiveListString()
-    {
-        BinaryFormatter bf = new BinaryFormatter();
-        return (string[][])bf.Deserialize(stream);
-    }
-
-
-
-
-
 
 
     public void SendBytes(Byte[] clientMessageAsByteArray)
     {
-        if (socketConnection == null)
+        if (serverSocket == null)
         {
             return;
         }
         try
         {
             // Get a stream object for writing. 			
-            if (stream.CanWrite)
-            {            
-                byte[] header = BitConverter.GetBytes(clientMessageAsByteArray.Length);
-                stream.Write(header, 0, header.Length); //send the size of array
-                stream.Flush();
-                Debug.Log("halutaan lähettää näin pitkä: " + clientMessageAsByteArray.Length);
 
-                stream.Read(buffer, 0, 4); //read the replycode
-                Int32 reply = BitConverter.ToInt32(buffer, 0);
-                if (reply == (int)PROTOCOL_CODES.ACCEPT)
-                {
-                    stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-                    stream.Flush();
-                }
-                else
-                {
-                    Debug.Log("Server denied request with: " + ((PROTOCOL_CODES)reply).ToString() + " !");
-                    //TODO : handle not acccepting
-                }
-                Debug.Log("Client sent his message - should be received by server");
+            byte[] header = BitConverter.GetBytes(clientMessageAsByteArray.Length);
+            writer.Write(header, 0, header.Length); //send the size of array
+
+
+            //read the replycode
+            Int32 reply = reader.ReadInt32();
+            if (reply == (int)PROTOCOL_CODES.ACCEPT)
+            {
+                writer.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
             }
+            else
+            {
+                Console.WriteLine("Server denied request to send something so large!");
+                //TODO : handle not acccepting
+            }
+            Console.WriteLine("Client sent his message - should be received by server");
         }
-        catch (SocketException socketException)
+        catch (Exception socketException)
         {
-            Debug.Log("Socket exception: " + socketException);
+            status = STATUS.ERROR;
+            Console.WriteLine("Socket exception: " + socketException);
         }
-        //Debug.Log("could not write");
+    }
+
+    public void SendMessage(string msg)
+    {
+        byte[] buffer = System.Text.Encoding.UTF8.GetBytes(msg);
+        SendBytes(buffer);
+    }
+
+    public string ReceiveMessage()
+    {
+        //stream.Read(bytesFrom, 0, 4); //read how many bytes are incoming
+        int bytesToCome = (int) GetRequest();
+        //int bytesToCome = BitConverter.ToInt32(bytesFrom, 0);
+
+        Debug.Log("|||||||||||||||||||||||||||||| " + System.Text.Encoding.UTF8.GetString(ReceiveBytes(bytesToCome)));
+        return System.Text.Encoding.UTF8.GetString(ReceiveBytes(bytesToCome));
+    }
+
+    public void SendListString(string[] obj)
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        bf.Serialize(stream, obj);
+    }
+    public string[] ReceiveListString()
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        return (string[])bf.Deserialize(stream);
+    }
+
+
+    public void SendArrayArrayString(string[][] obj)
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        bf.Serialize(stream, obj);
     }
 
 
 
-   
+    public string[][] ReceiveArrayArrayString()
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        return (string[][])bf.Deserialize(stream);
+    }
+
+
+    public bool UploadAssetPackage(string name, byte[] data)
+    {
+        if(SendRequest(PROTOCOL_CODES.UPLOAD_ASSETPACKAGE) == PROTOCOL_CODES.ACCEPT)
+        {
+            SendMessage(name);
+            string url = ReceiveMessage();
+
+            var cloudBlob = new CloudBlob(new System.Uri(url));
+            
+            MemoryStream memStream = new MemoryStream();
+            //CloudBlockBlob cloudBlockBlob = cloudBlobContainer.(name);  //TÄMÄ KOODI KUTSUTAAN UNITY APPLIKAATIOSTA
+            //cloudBlockBlob.UploadFromByteArray(bytesFrom, 0, 4);
+
+            //ok at this point the file is uploaded
+
+            SendProtocolCode(PROTOCOL_CODES.OK);
+            PROTOCOL_CODES reply = receiveProtocolCode();
+            if (reply == PROTOCOL_CODES.ERROR_NO_DBCONNECTION)
+            {//TODO handling of error
+
+            }
+            if(reply == PROTOCOL_CODES.OK)
+            {//party party all is fine
+                return true;
+            }
+
+
+            return true;
+        }
+        return false;
+    }
+
+
+
+
 }

@@ -6,6 +6,12 @@ using System.IO;
 using System;
 using GoogleARCore;
 using ImageAndVideoPicker;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Shared.Protocol;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 public class LocationManager : MonoBehaviour {
 
@@ -38,7 +44,13 @@ public class LocationManager : MonoBehaviour {
 
 	void Start () {
 
-
+        System.Net.ServicePointManager.ServerCertificateValidationCallback +=
+              delegate (object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate,
+                                      System.Security.Cryptography.X509Certificates.X509Chain chain,
+                                      System.Net.Security.SslPolicyErrors sslPolicyErrors)
+              {
+                  return true; // **** Always accept
+              };
 
         //m_Image = GetComponent<Image>();
         PickerEventListener.onImageSelect += OnImageSelect;
@@ -67,6 +79,10 @@ public class LocationManager : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.Space))
         {
             WriteImage(LastOpenedImagePath);
+        }
+        if (Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            LataaVeneKuva();
         }
 
     }
@@ -180,20 +196,86 @@ public class LocationManager : MonoBehaviour {
         ShowAddedLocation.text += InputValueString + "\n";
 
        
-        tcpclient.SendMessage(json);
-        tcpclient.sendJson(json);
+        //tcpclient.SendMessage(json);
+        tcpclient.SendJson(json);
         Debug.Log(json);
 
         writer.Close();
         gpsValuesInput.text = "";
 
     }
-
-    void SendMessage()
+    
+    string[] AskForKeys(string videoID)
     {
+        tcpclient.SendProtocolCode(PROTOCOL_CODES.REQUEST_VIEW_VIDEO);
+        if(tcpclient.GetRequest() == PROTOCOL_CODES.ACCEPT)
+        {
+            tcpclient.SendMessage(videoID);
+            return tcpclient.ReceiveListString();
+        }
 
+        return null;
     }
 
+    public bool MyRemoteCertificateValidationCallback(System.Object sender,
+    X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+    {
+        bool isOk = true;
+        // If there are errors in the certificate chain,
+        // look at each error to determine the cause.
+        if (sslPolicyErrors != SslPolicyErrors.None)
+        {
+            for (int i = 0; i < chain.ChainStatus.Length; i++)
+            {
+                if (chain.ChainStatus[i].Status == X509ChainStatusFlags.RevocationStatusUnknown)
+                {
+                    continue;
+                }
+                chain.ChainPolicy.RevocationFlag = X509RevocationFlag.EntireChain;
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
+                chain.ChainPolicy.UrlRetrievalTimeout = new TimeSpan(0, 1, 0);
+                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllFlags;
+                bool chainIsValid = chain.Build((X509Certificate2)certificate);
+                if (!chainIsValid)
+                {
+                    isOk = false;
+                    break;
+                }
+            }
+        }
+        return isOk;
+    }
+    public void LataaVeneKuva()
+    {
+        
+        if (tcpclient.SendRequest(PROTOCOL_CODES.POST_EDITS) == PROTOCOL_CODES.ACCEPT)
+        {
+
+            int bytesToCome = tcpclient.reader.ReadInt32(); //read how many bytes are incoming
+            tcpclient.SendProtocolCode(PROTOCOL_CODES.ACCEPT);
+            //int bytesToCome = BitConverter.ToInt32(tcpclient.bytesFrom, 0);
+
+            Debug.Log("incoming : " + bytesToCome);
+            byte[] bytes = tcpclient.ReceiveBytes(bytesToCome);
+
+            Debug.Log("accepted " + System.Text.Encoding.UTF8.GetString(bytes));
+            Debug.Log("accepted as int" + bytes[0]);
+            string url = System.Text.Encoding.UTF8.GetString(bytes);
+            var cloudBlob = new CloudBlob(new System.Uri(url));
+            MemoryStream memStream = new MemoryStream();
+            //cloudBlob.DownloadToStream(memStream);
+            cloudBlob.DownloadToFile("Assets/Resources/boatphoto.png", FileMode.OpenOrCreate);
+        }
+        else
+        {
+            Debug.Log("vituiks män");
+        }
+
+        
+
+       
+        
+    }
 
 
     public Texture2D SendingTexture;
@@ -208,7 +290,7 @@ public class LocationManager : MonoBehaviour {
         bytes = SendingTexture.EncodeToPNG();
         var str = System.Text.Encoding.Default.GetString(bytes) + "\0";
         //tcpclient.SendImage(System.Text.Encoding.Default.GetBytes(str));
-        tcpclient.sendImage(bytes);
+        tcpclient.SendImage(bytes);
 
     }
 
