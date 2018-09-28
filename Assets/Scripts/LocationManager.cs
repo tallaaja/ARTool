@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 using System;
+using UnityEngine.Video;
 using GoogleARCore;
 using ImageAndVideoPicker;
 using Microsoft.WindowsAzure.Storage;
@@ -12,9 +13,13 @@ using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using RenderHeads.Media.AVProVideo;
 
-public class LocationManager : MonoBehaviour {
-
+public class LocationManager : MonoBehaviour
+{
+    public GameObject canvas;
+    public MediaPlayer mp;
+    public VideoPlayer vPlayer;
     public static string json;
     SpriteRenderer m_SpriteRenderer;
     private Texture2D texture;
@@ -40,17 +45,17 @@ public class LocationManager : MonoBehaviour {
     public TCPTestClient tcpclient;
     public Button DeleteInsert;
 
-	// Use this for initialization
+    // Use this for initialization
 
-	void Start () {
-
+    void Start()
+    {
         System.Net.ServicePointManager.ServerCertificateValidationCallback +=
-              delegate (object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate,
-                                      System.Security.Cryptography.X509Certificates.X509Chain chain,
-                                      System.Net.Security.SslPolicyErrors sslPolicyErrors)
-              {
-                  return true; // **** Always accept
-              };
+                delegate (object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate,
+                                        System.Security.Cryptography.X509Certificates.X509Chain chain,
+                                        System.Net.Security.SslPolicyErrors sslPolicyErrors)
+                {
+                    return true; // **** Always accept
+                };
 
         //m_Image = GetComponent<Image>();
         PickerEventListener.onImageSelect += OnImageSelect;
@@ -60,22 +65,23 @@ public class LocationManager : MonoBehaviour {
         m_SpriteRenderer = GetComponent<SpriteRenderer>();
 
         var firstPermission = AndroidPermissionsManager.RequestPermission("android.permission.ACCESS_FINE_LOCATION");
-        
+
         AddLocationButton.onClick.AddListener(WriteString);
         usethislocation.onClick.AddListener(LocationToString);
         DeleteInsert.onClick.AddListener(DeleteNewestInsert);
 
         //AddPhoto.onClick.AddListener(opengallery);
 
-        
+
         firstPermission.WaitForCompletion();
 
-        StartCoroutine(getLocation());
+        //StartCoroutine(getLocation());
 
     }
-	
-	// Update is called once per frame
-	void Update () {
+
+    // Update is called once per frame
+    void Update()
+    {
         if (Input.GetKeyDown(KeyCode.Space))
         {
             WriteImage(LastOpenedImagePath);
@@ -90,6 +96,7 @@ public class LocationManager : MonoBehaviour {
     void DeleteNewestInsert()
     {
         Debug.Log("old delete neweset sql insertion");
+
     }
 
 
@@ -138,9 +145,9 @@ public class LocationManager : MonoBehaviour {
         m_Image.sprite = mySprite;
 
 
-       
+
         //File.WriteAllBytes(Application.persistentDataPath + "/Downloads/MyImage.png", bytes);
-        
+
 
     }
 
@@ -148,13 +155,13 @@ public class LocationManager : MonoBehaviour {
 
     void LocationToString()
     {
-        
+
         gpsValuesInput.text = sLatitude.ToString() + ", " + sLongitude.ToString();
     }
 
     void WriteString()
     {
-        if(NativeGallery.Permission.Granted == NativeGallery.CheckPermission())
+        if (NativeGallery.Permission.Granted == NativeGallery.CheckPermission())
         {
             ShowAddedLocation.text += "lupa on";
         }
@@ -165,7 +172,7 @@ public class LocationManager : MonoBehaviour {
             {
                 NativeGallery.SaveImageToGallery(texture, "GalleryTest", filename);
             }
-            catch(Exception E)
+            catch (Exception E)
             {
                 ShowAddedLocation.text += E;
             }
@@ -195,7 +202,7 @@ public class LocationManager : MonoBehaviour {
         writer.WriteLine(json);
         ShowAddedLocation.text += InputValueString + "\n";
 
-       
+
         //tcpclient.SendMessage(json);
         tcpclient.SendJson(json);
         Debug.Log(json);
@@ -204,11 +211,11 @@ public class LocationManager : MonoBehaviour {
         gpsValuesInput.text = "";
 
     }
-    
+
     string[] AskForKeys(string videoID)
     {
         tcpclient.SendProtocolCode(PROTOCOL_CODES.REQUEST_VIEW_VIDEO);
-        if(tcpclient.GetRequest() == PROTOCOL_CODES.ACCEPT)
+        if (tcpclient.GetRequest() == PROTOCOL_CODES.ACCEPT)
         {
             tcpclient.SendMessage(videoID);
             return tcpclient.ReceiveListString();
@@ -247,7 +254,7 @@ public class LocationManager : MonoBehaviour {
     }
     public void LataaVeneKuva()
     {
-        
+
         if (tcpclient.SendRequest(PROTOCOL_CODES.POST_EDITS) == PROTOCOL_CODES.ACCEPT)
         {
 
@@ -262,26 +269,38 @@ public class LocationManager : MonoBehaviour {
             Debug.Log("accepted as int" + bytes[0]);
             string url = System.Text.Encoding.UTF8.GetString(bytes);
             var cloudBlob = new CloudBlob(new System.Uri(url));
-            MemoryStream memStream = new MemoryStream();
+            //MemoryStream memStream = new MemoryStream();
+            //vPlayer.url = url;
+            //vPlayer.Play();
+            canvas.SetActive(false);
+            mp.m_VideoPath = url;
+            mp.enabled = true;
+            
+            mp.m_AutoOpen = true;
+            
+            mp.Play();
+            mp.m_AutoStart = true;
+            Debug.Log(mp.VideoOpened);
+
             //cloudBlob.DownloadToStream(memStream);
-            cloudBlob.DownloadToFile("Assets/Resources/boatphoto.png", FileMode.OpenOrCreate);
+            //cloudBlob.DownloadToFile("Assets/Resources/boatphoto.png", FileMode.OpenOrCreate);
         }
         else
         {
             Debug.Log("vituiks män");
         }
 
-        
 
-       
-        
+
+
+
     }
 
 
     public Texture2D SendingTexture;
     void WriteImage(String path)
     {
-        if(path != "")
+        if (path != "")
         {
             Debug.Log(path);
             bytes = texture.EncodeToPNG();
@@ -342,7 +361,7 @@ public class LocationManager : MonoBehaviour {
             sLatitude = Input.location.lastData.latitude;
             sLongitude = Input.location.lastData.longitude;
         }
-        deviceCoordinates = new Vector2(sLatitude,sLongitude);
+        deviceCoordinates = new Vector2(sLatitude, sLongitude);
         //service.Stop();
         ready = true;
 
@@ -352,5 +371,5 @@ public class LocationManager : MonoBehaviour {
 
     }
 
-
 }
+
