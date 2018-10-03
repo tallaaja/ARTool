@@ -62,8 +62,8 @@ public class TCPTestClient : MonoBehaviour
     // Use this for initialization 	
     void Start()
     {
-
-        ConnectToTcpServer();
+        StartCoroutine("ConnectToTcpServer");
+        
     }
     // Update is called once per frame
     void Update()
@@ -148,7 +148,7 @@ public class TCPTestClient : MonoBehaviour
 
     public void SendJson(String message)
     {
-        Debug.Log("json sent");
+        Debug.Log("json sent " + message);
         if (SendRequest(PROTOCOL_CODES.SENDJSON) == PROTOCOL_CODES.ACCEPT) SendBytes(Encoding.UTF8.GetBytes(message));
         else Debug.Log("Server did not accept");
     }
@@ -310,7 +310,7 @@ public class TCPTestClient : MonoBehaviour
             writer.Write((Int32)code);
             //read the replycode
             Int32 reply = reader.ReadInt32(); ;
-            Console.WriteLine("Client sent request. Received reply:" + ((PROTOCOL_CODES)reply).ToString());
+            Debug.Log("Client sent request. Received reply:" + ((PROTOCOL_CODES)reply).ToString());
             return (PROTOCOL_CODES)reply;
 
         }
@@ -320,7 +320,6 @@ public class TCPTestClient : MonoBehaviour
             status = STATUS.ERROR;
             return PROTOCOL_CODES.ERROR;
         }
-        return PROTOCOL_CODES.ERROR;
     }
 
 

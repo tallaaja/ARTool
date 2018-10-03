@@ -14,6 +14,7 @@ using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using RenderHeads.Media.AVProVideo;
+using System.Threading;
 
 public class LocationManager : MonoBehaviour
 {
@@ -84,7 +85,8 @@ public class LocationManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            WriteImage(LastOpenedImagePath);
+            Thread t = new Thread(WriteImageWrapper);
+            t.Start();
         }
         if (Input.GetKeyDown(KeyCode.KeypadEnter))
         {
@@ -97,6 +99,12 @@ public class LocationManager : MonoBehaviour
     {
         Debug.Log("old delete neweset sql insertion");
 
+    }
+
+
+    void WriteImageWrapper()
+    {
+        tcpclient.SendJson("asdölkjasölkdjasdfasdfasdfasdfasdf adsfasd fasd fasd f");
     }
 
 

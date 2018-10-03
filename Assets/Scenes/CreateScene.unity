@@ -637,7 +637,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 192192, guid: 84fd971487e311c45a6573a72503271c, type: 2}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 11492190, guid: 84fd971487e311c45a6573a72503271c, type: 2}
       propertyPath: m_VideoPath
@@ -2112,7 +2112,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!328 &1907137341
 VideoPlayer:
   m_ObjectHideFlags: 0

@@ -616,12 +616,13 @@ PlayerSettings:
       daydreamIconBackground: {fileID: 0}
   cloudServicesEnabled:
     Build: 1
+    Collab: 1
     UNet: 1
   facebookSdkVersion: 7.9.4
   apiCompatibilityLevel: 3
   cloudProjectId: 5108011e-43b8-4aeb-aef6-f74ba51a5d4d
   projectName: GPSTest
-  organizationId: simlabsocial
+  organizationId: simlabit
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0
   disableOldInputManagerSupport: 0
