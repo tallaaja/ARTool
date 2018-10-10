@@ -19,17 +19,15 @@ using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 public enum PROTOCOL_CODES
 {
     ERROR = -1, ERROR_NO_DBCONNECTION
-    , ACCEPT, DENY, SENDIMAGE, SENDVIDEO, SENDJSON, SENDLOCATION, QUIT, OK
+    , ACCEPT, DENY, SENDIMAGE, SENDVIDEO, SENDJSON, SENDLOCATION, SENDMESSAGE, QUIT, OK
 
     , GET_MY_CONTENTPACKS, SEARCH_CONTENT_PACKS, SEARCH_CONTENTPACKS_BY_USER
     , GET_SERIES_IN_PACKAGE, GET_VIDEOS_IN_SERIES
     , REQUEST_VIEW_VIDEO, REQUEST_EDIT_VIDEO
     , POST_EDITS, UPLOAD_VIDEO, UPLOAD_ASSETPACKAGE
 
-    ,KEEPALIVE_SIGNAL
-
+    , KEEPALIVE_SIGNAL
 };
-
 
 
 public enum STATUS
@@ -54,6 +52,9 @@ public class TCPTestClient : MonoBehaviour
     public STATUS status = STATUS.RUNNING;
 
     Int32 lastPing = 0;
+    BinaryReader pingReader;
+
+
     private object cloudBlobContainer;
     string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=platformvideos;AccountKey=h6iS/e7UEIOXoLpd3UeECNXZhjOzVSvbdsn6QWs5+k0kJH/iBKZzxZFBJ41TTBZnkrtBC3WKOM2Xmp0ouBFXUg==;EndpointSuffix=core.windows.net";
     string policyName = "SimLabIT_Policy";
@@ -78,34 +79,27 @@ public class TCPTestClient : MonoBehaviour
         {
             pingSocketConnection.Close();
             serverSocket.Close();
+            Debug.Log("closed");
         }
         else
         {
             SendProtocolCode(PROTOCOL_CODES.ERROR);
         }
-    }
-
-    IEnumerator WaitForSeconds()
-    {
-       // Debug.Log("before");
-        yield return new WaitForSeconds(2);
-        //Debug.Log("after");
-        KeepAlive();
     }
 
     void KeepAlive()
     {
-      //  Debug.Log("Sending ping");
-        if (SendPing())
+        while (true)
         {
-            //WaitForSeconds();
-            lastPing = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            if (receivePing())
+            {
+                lastPing = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            }
+            else
+            {
+                SendProtocolCode(PROTOCOL_CODES.ERROR);
+            }
         }
-        else
-        {
-            SendProtocolCode(PROTOCOL_CODES.ERROR);
-        }
-
     }
 
     /// <summary> 	
@@ -119,11 +113,11 @@ public class TCPTestClient : MonoBehaviour
             serverSocket = new TcpClient("127.0.0.1", 8052);
             pingSocketConnection = new TcpClient("127.0.0.1", 8051);
             stream = serverSocket.GetStream();
-            pingStream = serverSocket.GetStream();
+            pingStream = pingSocketConnection.GetStream();
             //StartCoroutine(KeepAlive());
 
             clientKeepAliveThread = new Thread(new ThreadStart(KeepAlive));
-            clientKeepAliveThread.IsBackground = true;
+            //clientKeepAliveThread.IsBackground = true;
             clientKeepAliveThread.Start();
 
             /*
@@ -131,7 +125,7 @@ public class TCPTestClient : MonoBehaviour
             clientReceiveThread.IsBackground = true;
             clientReceiveThread.Start();
             */
-
+            pingReader = new BinaryReader(pingStream);
             reader = new BinaryReader(stream);
             writer = new BinaryWriter(stream);
         }
@@ -149,7 +143,11 @@ public class TCPTestClient : MonoBehaviour
     public void SendJson(String message)
     {
         Debug.Log("json sent " + message);
-        if (SendRequest(PROTOCOL_CODES.SENDJSON) == PROTOCOL_CODES.ACCEPT) SendBytes(Encoding.UTF8.GetBytes(message));
+        if (SendRequest(PROTOCOL_CODES.SENDJSON) == PROTOCOL_CODES.ACCEPT)
+        {
+            writer.Write(message);
+            //SendBytes(Encoding.UTF8.GetBytes(message));
+        }
         else Debug.Log("Server did not accept");
     }
 
@@ -197,26 +195,14 @@ public class TCPTestClient : MonoBehaviour
         }
     }
 
-    bool SendPing()
+    bool receivePing()
     {
-        if (pingSocketConnection == null)
-        {
-
-            return false;
-        }
         try
         {
-            // Get a stream object for writing. 			
-            if (pingStream.CanWrite)
-            {
-                //byte[] message = BitConverter.GetBytes((int)PROTOCOL_CODES.KEEPALIVE_SIGNAL);
+            pingReader.ReadInt32();
+            Debug.Log("received ping");
+            return true;
 
-                pingStream.Read(bytesFrom, 0, 4); //read the replycode
-                Debug.Log("received ping");
-                return true;
-            }
-            status = STATUS.ERROR;
-            return false;
         }
         catch (SocketException socketException)
         {
@@ -271,17 +257,13 @@ public class TCPTestClient : MonoBehaviour
 
     public bool SendProtocolCode(PROTOCOL_CODES code)
     {
-        if (serverSocket == null)
-        {
-
-            return false;
-        }
         try
         {
             // Get a stream object for writing. 			
 
             byte[] message = BitConverter.GetBytes((int)code);
             writer.Write(message, 0, 4); //read the replycode
+            writer.Flush();
             Console.WriteLine("Sent protocol code:" + ((PROTOCOL_CODES)code).ToString());
             return true;
 
@@ -298,19 +280,16 @@ public class TCPTestClient : MonoBehaviour
 
     public PROTOCOL_CODES SendRequest(PROTOCOL_CODES code)
     {
-        if (serverSocket == null)
-        {
-            return PROTOCOL_CODES.ERROR;
-        }
         try
         {
             // Get a stream object for writing. 			
 
-            byte[] message = BitConverter.GetBytes((int)code);
+            //byte[] message = BitConverter.GetBytes((int)code);
             writer.Write((Int32)code);
+            writer.Flush();
             //read the replycode
             Int32 reply = reader.ReadInt32(); ;
-            Debug.Log("Client sent request. Received reply:" + ((PROTOCOL_CODES)reply).ToString());
+            Debug.Log("Received reply to request:" + ((PROTOCOL_CODES)reply).ToString());
             return (PROTOCOL_CODES)reply;
 
         }
@@ -325,23 +304,20 @@ public class TCPTestClient : MonoBehaviour
 
     public void SendBytes(Byte[] clientMessageAsByteArray)
     {
-        if (serverSocket == null)
-        {
-            return;
-        }
         try
         {
             // Get a stream object for writing. 			
 
-            byte[] header = BitConverter.GetBytes(clientMessageAsByteArray.Length);
-            writer.Write(header, 0, header.Length); //send the size of array
-
+            Int32 header = clientMessageAsByteArray.Length;
+            writer.Write(header); //send the size of array
+            writer.Flush();
 
             //read the replycode
             Int32 reply = reader.ReadInt32();
             if (reply == (int)PROTOCOL_CODES.ACCEPT)
             {
                 writer.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
+                writer.Flush();
             }
             else
             {
@@ -355,6 +331,8 @@ public class TCPTestClient : MonoBehaviour
             status = STATUS.ERROR;
             Console.WriteLine("Socket exception: " + socketException);
         }
+
+
     }
 
     public void SendMessage(string msg)

@@ -17,6 +17,7 @@ public class BlobStorage : BaseStorage
 
 	public async void BlobStorageTest()
 	{
+        
 		ClearOutput();
 		WriteLine("-- Testing Blob Storage --");
 		await BasicStorageBlockBlobOperationsAsync();

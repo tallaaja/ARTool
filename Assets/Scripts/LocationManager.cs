@@ -90,7 +90,7 @@ public class LocationManager : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.KeypadEnter))
         {
-            LataaVeneKuva();
+            WatchVideo();
         }
 
     }
@@ -219,7 +219,7 @@ public class LocationManager : MonoBehaviour
         gpsValuesInput.text = "";
 
     }
-
+    public InputField input;
     string[] AskForKeys(string videoID)
     {
         tcpclient.SendProtocolCode(PROTOCOL_CODES.REQUEST_VIEW_VIDEO);
@@ -260,7 +260,7 @@ public class LocationManager : MonoBehaviour
         }
         return isOk;
     }
-    public void LataaVeneKuva()
+    public void WatchVideo()
     {
 
         if (tcpclient.SendRequest(PROTOCOL_CODES.POST_EDITS) == PROTOCOL_CODES.ACCEPT)
@@ -278,20 +278,18 @@ public class LocationManager : MonoBehaviour
             string url = System.Text.Encoding.UTF8.GetString(bytes);
             var cloudBlob = new CloudBlob(new System.Uri(url));
             //MemoryStream memStream = new MemoryStream();
-            //vPlayer.url = url;
-            //vPlayer.Play();
+            vPlayer.url = url;
+            vPlayer.Play();
             canvas.SetActive(false);
-            mp.m_VideoPath = url;
-            mp.enabled = true;
+            //mp.m_VideoPath = url;
+            //mp.enabled = true;
             
-            mp.m_AutoOpen = true;
+            //mp.m_AutoOpen = true;
             
-            mp.Play();
-            mp.m_AutoStart = true;
-            Debug.Log(mp.VideoOpened);
+            //mp.Play();
+            //mp.m_AutoStart = true;
+            //Debug.Log(mp.VideoOpened);
 
-            //cloudBlob.DownloadToStream(memStream);
-            //cloudBlob.DownloadToFile("Assets/Resources/boatphoto.png", FileMode.OpenOrCreate);
         }
         else
         {
